@@ -51,7 +51,7 @@ function App() {
           <Navbar />
           <AppRoutes />
           <footer className="app-footer">
-            <p>Practical 9 — In-Memory Caching &amp; Query Optimization &bull; AWDF &bull; D25CS118</p>
+            <p>Practical 10 — Asynchronous Processing &amp; Event-Driven Architecture &bull; AWDF &bull; D25CS118</p>
           </footer>
         </div>
       </AuthProvider>

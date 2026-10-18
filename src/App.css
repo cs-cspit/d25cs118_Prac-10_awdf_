@@ -1,5 +1,5 @@
 /* ============================================================
-   App.css — Full-Stack Task Manager (Practical 9: Caching)
+   App.css — Full-Stack Task Manager (Practical 10: Event-Driven Notifications)
    ============================================================ */
 
 /* ============== NAVIGATION ============== */
@@ -878,4 +878,60 @@
 .stats-card h4 {
   color: var(--text);
   margin-bottom: var(--sp-sm);
+}
+
+/* ===== Practical 10: background notifications ===== */
+.notification-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  padding: var(--sp-xl);
+  border-radius: var(--r-lg);
+  margin-bottom: var(--sp-xl);
+}
+
+.notification-panel h3 {
+  color: var(--text-heading);
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin-bottom: var(--sp-xs);
+}
+
+.notification-hint,
+.notification-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: var(--sp-md);
+}
+
+.notification-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-sm) var(--sp-md);
+  background: var(--bg-surface);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--r-sm);
+  animation: slideIn 0.3s var(--ease);
+}
+
+.notification-task-updated { border-left-color: var(--warning); }
+.notification-task-deleted { border-left-color: var(--danger); }
+
+.notification-message {
+  flex: 1;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.notification-time {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
 }

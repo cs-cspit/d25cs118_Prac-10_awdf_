@@ -11,7 +11,9 @@ import notFound from './middleware/notFound.js';
 import authRoutes from './routes/authRoutes.js';
 import taskRoutes from './routes/taskRoutes.js';
 import cacheRoutes from './routes/cacheRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 import { isCacheEnabled } from './config/cache.js';
+import { registerListeners } from './events/listeners.js';
 
 // Fail fast if the secret is missing - never fall back to a hardcoded one
 if (!process.env.JWT_SECRET) {
@@ -21,6 +23,9 @@ if (!process.env.JWT_SECRET) {
 
 // Connect to MongoDB
 await connectDB();
+
+// Register event listeners once, before any request can emit an event
+registerListeners();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -35,8 +40,8 @@ app.use(express.json()); // 3. parse the JSON body
 // Root route - API Welcome
 app.get('/api', (req, res) => {
   res.status(200).json({
-    message: 'Task Management RESTful API (JWT Auth + node-cache + MongoDB)',
-    version: '5.0.0',
+    message: 'Task Management RESTful API (JWT Auth + node-cache + EventEmitter + MongoDB)',
+    version: '6.0.0',
     endpoints: {
       'POST /api/auth/register': 'Register a new user (public)',
       'POST /api/auth/login': 'Log in and receive a JWT (public)',
@@ -47,8 +52,11 @@ app.get('/api', (req, res) => {
       'PUT /api/tasks/:id': 'Update a task (protected)',
       'DELETE /api/tasks/:id': 'Delete a task (protected)',
       'GET /api/cache/stats': 'Cache hit/miss counters (protected, debug)',
-      'DELETE /api/cache': 'Flush cache and reset counters (protected, debug)'
+      'DELETE /api/cache': 'Flush cache and reset counters (protected, debug)',
+      'GET /api/notifications': 'Notifications produced by background event listeners (protected)',
+      'DELETE /api/notifications': 'Clear notifications (protected)'
     },
+    events: 'POST/PUT/DELETE /api/tasks emit task-created / task-updated / task-deleted after responding',
     cache: 'GET responses carry X-Cache: HIT | MISS and X-Response-Time headers',
     auth: 'Send header  Authorization: Bearer <token>  on protected routes',
     documentation: 'See README.md for full API documentation'
@@ -64,6 +72,9 @@ app.use('/api/tasks', taskRoutes);
 // Cache debug routes
 app.use('/api/cache', cacheRoutes);
 
+// Notifications written by the event listeners
+app.use('/api/notifications', notificationRoutes);
+
 // 404 Handler for undefined routes (after all routes)
 app.use(notFound);
 
@@ -74,4 +85,5 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Cache ${isCacheEnabled() ? 'ENABLED' : 'DISABLED'} (TTL ${process.env.CACHE_TTL || 60}s)`);
+  console.log(`Notifications: ${process.env.NOTIFY_MODE === 'sync' ? 'SYNC (inline, for comparison)' : 'ASYNC via EventEmitter'}, simulated delay ${process.env.NOTIFY_DELAY_MS ?? 2000} ms`);
 });

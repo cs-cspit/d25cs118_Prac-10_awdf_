@@ -7,6 +7,7 @@ import { useAuth } from '../context/authContext'
 // Heavy third-party chart (recharts) - its chunk downloads only when the user
 // clicks "Show statistics", not when the Tasks page first opens.
 const TaskStats = lazy(() => import('./TaskStats'))
+const NotificationPanel = lazy(() => import('./NotificationPanel'))
 
 const PRIORITY_LABELS = {
   low: '🟢 Low',
@@ -125,7 +126,7 @@ function Tasks() {
 
   const showSuccess = useCallback((message) => {
     setSuccessMessage(message)
-    setTimeout(() => setSuccessMessage(''), 3000)
+    setTimeout(() => setSuccessMessage(''), 5000)
   }, [])
 
   const handleSubmit = async (e) => {
@@ -137,11 +138,15 @@ function Tasks() {
     }
 
     try {
+      const start = performance.now()
       const result = editingId
         ? await updateTask(editingId, formData)
         : await createTask(formData)
+      const ms = Math.round(performance.now() - start)
 
-      showSuccess(result.message ? `✓ ${result.message}` : '✓ Task saved successfully!')
+      showSuccess(editingId
+        ? `✓ ${result.message || 'Task saved successfully!'}`
+        : `✓ ${result.message} — API responded in ${ms} ms; the notification is sent in the background`)
       await fetchTasks()
 
       setFormData({ title: '', description: '', priority: 'medium' })
@@ -260,6 +265,11 @@ function Tasks() {
           </div>
         </form>
       </div>
+
+      {/* Notifications produced by the EventEmitter listeners */}
+      <Suspense fallback={<Spinner label="Loading notifications…" />}>
+        <NotificationPanel />
+      </Suspense>
 
       {/* Statistics - lazy-loaded heavy component */}
       <div className="tasks-section">

@@ -3,8 +3,14 @@ import Task from '../models/Task.js';
 import protect from '../middleware/auth.js';
 import cache, { allTasksKey, invalidateTasks, isCacheEnabled, taskKey } from '../config/cache.js';
 import { validateTaskId, validateTaskBody } from '../middleware/validation.js';
+import taskEvents, { TASK_CREATED, TASK_DELETED, TASK_UPDATED } from '../events/taskEvents.js';
+import { sendCreatedNotification } from '../events/listeners.js';
 
 const router = express.Router();
+
+// NOTIFY_MODE=sync runs the notification inline (inside the route) instead of
+// in the event listener - only to compare response times. Default: async.
+const isSyncNotify = () => process.env.NOTIFY_MODE === 'sync';
 
 // Every task route requires a valid JWT.
 // Pipeline: protect (auth) -> validateTaskId / validateTaskBody -> controller
@@ -102,10 +108,32 @@ router.post('/', validateTaskBody, async (req, res, next) => {
     // Write succeeded -> the cached list is now stale
     invalidateTasks(req.user.id);
 
+    const payload = { task: newTask.toObject(), user: req.user, emittedAt: null };
+
+    if (isSyncNotify()) {
+      // Anti-pattern for comparison: the client waits for the notification work
+      try {
+        await sendCreatedNotification({ ...payload, emittedAt: 'inline (sync mode)' });
+      } catch (err) {
+        console.error(`[Sync Notification Error] ${err.message}`);
+      }
+    }
+
+    const respondedAt = new Date().toISOString();
+    console.log(`[API] Response sent at          ${respondedAt}  (201 for "${newTask.title}")`);
     res.status(201).json({
       message: 'Task created successfully',
-      task: newTask
+      task: newTask,
+      respondedAt,
+      notification: isSyncNotify() ? 'sent inline before responding (sync mode)' : 'queued - handled by the task-created listener'
     });
+
+    // Emitted AFTER the response: emit() only schedules the listener's work,
+    // the async listener continues on the event loop while the client already
+    // has its 201.
+    if (!isSyncNotify()) {
+      taskEvents.emit(TASK_CREATED, { ...payload, emittedAt: new Date().toISOString() });
+    }
   } catch (err) {
     if (err.name === 'ValidationError') return sendMongooseValidation(res, err);
     next(err);
@@ -141,6 +169,7 @@ router.put('/:id', validateTaskId, validateTaskBody, async (req, res, next) => {
       message: 'Task updated successfully',
       task: updatedTask
     });
+    taskEvents.emit(TASK_UPDATED, { task: updatedTask.toObject(), user: req.user });
   } catch (err) {
     if (err.name === 'ValidationError') return sendMongooseValidation(res, err);
     next(err);
@@ -166,6 +195,7 @@ router.delete('/:id', validateTaskId, async (req, res, next) => {
       message: 'Task deleted successfully',
       task
     });
+    taskEvents.emit(TASK_DELETED, { task: task.toObject(), user: req.user });
   } catch (err) {
     next(err);
   }

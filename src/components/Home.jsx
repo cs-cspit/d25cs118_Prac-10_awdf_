@@ -7,20 +7,19 @@ function Home() {
   return (
     <section className="section section-hero">
       <div className="hero-copy">
-        <p className="eyebrow">Welcome to Practical 9</p>
+        <p className="eyebrow">Welcome to Practical 10</p>
         <h1>
-          In-Memory <span className="gradient-text">Caching</span>
+          Event-Driven <span className="gradient-text">Notifications</span>
         </h1>
         <p className="section-intro">
-          The Task Manager API now answers repeated reads from memory using
-          node-cache, and invalidates the cache on every write.
+          Creating, updating or deleting a task now emits an event with Node&apos;s built-in
+          EventEmitter. Listeners do the slow notification work in the background.
         </p>
         <p className="hero-note">
-          <code>GET /api/tasks</code> checks the cache first. On a <strong>HIT</strong> the
-          stored list is returned immediately; on a <strong>MISS</strong> MongoDB is queried
-          and the result is cached for 60 seconds. Any POST, PUT or DELETE deletes the
-          affected keys so stale data is never served. Every response carries
-          <code> X-Cache</code> and <code>X-Response-Time</code> headers.
+          <code>POST /api/tasks</code> saves the task, sends the <strong>201</strong> response and only
+          then calls <code>emit(&apos;task-created&apos;)</code>. The listener needs about 2 seconds
+          (simulated e-mail), but the client never waits for it. The console timestamps show the
+          API response logged before the listener finishes.
         </p>
         <p className="hero-note">
           {user ? (
@@ -32,13 +31,13 @@ function Home() {
         <div className="feature-list">
           <p>✨ Key Features:</p>
           <ul>
-            <li>node-cache with a 60s TTL on GET /api/tasks (per-user key)</li>
-            <li>GET /api/tasks/:id cached separately under its own key</li>
-            <li>Cache invalidated on every POST / PUT / DELETE</li>
-            <li>GET /api/cache/stats — hit / miss counters debug endpoint</li>
-            <li>Compound index {'{ user: 1, createdAt: -1 }'} + lean() queries</li>
-            <li>Measured with 2000 tasks: ~11 ms cached vs ~35 ms uncached (server time)</li>
-            <li>Still includes lazy loading (P8) and JWT auth (P7)</li>
+            <li>server/events/taskEvents.js — one shared EventEmitter instance</li>
+            <li>task-created listener with a 2 s simulated delay (non-blocking)</li>
+            <li>task-updated and task-deleted listeners with their own messages</li>
+            <li>&apos;error&apos; listener catches errors thrown inside async listeners</li>
+            <li>Timestamps logged at response time and at listener start / finish</li>
+            <li>NOTIFY_MODE=sync for comparison: the response then waits ~2 s</li>
+            <li>Still includes caching (P9), lazy loading (P8) and JWT auth (P7)</li>
           </ul>
         </div>
       </div>

@@ -20,7 +20,7 @@ function Navbar() {
 
   return (
     <header className="navbar">
-      <div className="brand">AWDF P-9</div>
+      <div className="brand">AWDF P-10</div>
       <nav aria-label="Main navigation">
         <ul className="nav-list">
           {links.map((link) => (
